@@ -1,0 +1,68 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Loading and preprocessing the data
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date)
+
+
+## What is mean total number of steps taken per day?
+
+library(dplyr)
+
+total_steps <- activity %>%
+  filter(!is.na(steps)) %>%
+  group_by(date) %>%
+  summarize(total = sum(steps))
+
+hist(total_steps$total, main="Total Steps Each Day", xlab="Steps")
+mean(total_steps$total)
+median(total_steps$total)
+
+
+## What is the average daily activity pattern?
+interval_avg <- activity %>%
+  filter(!is.na(steps)) %>%
+  group_by(interval) %>%
+  summarize(mean_steps = mean(steps))
+
+plot(interval_avg$interval, interval_avg$mean_steps, type="l")
+
+
+
+## Imputing missing values
+
+sum(is.na(activity$steps))  # Count missing
+
+filled_activity <- activity
+filled_activity$steps <- ifelse(is.na(filled_activity$steps),
+                                 interval_avg$mean_steps[match(filled_activity$interval, interval_avg$interval)],
+                                 activity$steps)
+filled_total <- filled_activity %>%
+  group_by(date) %>%
+  summarize(total = sum(steps))
+
+hist(filled_total$total)
+mean(filled_total$total)
+median(filled_total$total)
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+filled_activity$day_type <- ifelse(weekdays(filled_activity$date) %in% c("Saturday", "Sunday"), 
+                                   "weekend", "weekday")
+
+avg_steps_daytype <- filled_activity %>%
+  group_by(interval, day_type) %>%
+  summarize(mean_steps = mean(steps))
+
+library(ggplot2)
+
+ggplot(avg_steps_daytype, aes(x = interval, y = mean_steps)) +
+  geom_line() +
+  facet_wrap(~day_type, ncol=1)
+
